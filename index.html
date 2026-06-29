@@ -23,7 +23,7 @@
 
     <!-- ========== 顶栏 ========== -->
     <header class="header">
-        <h1 class="logo">◈ Sort<span>动画</span></h1>
+        <h1 class="logo">🌙 Sort<span>动画</span></h1>
         <div class="header-right">
             <span class="badge badge-algo" id="algoBadge">冒泡排序</span>
             <!-- 侧边栏折叠按钮（小屏可见）-->
@@ -71,12 +71,12 @@
             <div class="section">
                 <div class="section-title">🔢 数组设置</div>
                 <div class="control-row">
-                    <label>数组长度</label>
+                    <label>数组长度(2-500)</label>
                     <div class="range-row">
                         <input type="range" id="sizeSlider" min="2" max="500" value="50" step="1">
                         <input type="number" id="sizeInput" class="text-input"
-                               style="width:64px;padding:2px 3px;font-size:16px;text-align:center" min="2" max="500"
-                               value="50">
+                               style="width:64px;padding:2px 2px;font-size:16px;text-align:center" min="2" max="500"
+                               value="50" title="滚轮可调节数值">
                     </div>
                 </div>
 
@@ -116,8 +116,8 @@
                 <div class="custom-section">
                     <!-- 编辑器顶栏 -->
                     <div class="custom-header">
-                        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-                        <input type="text" id="customAlgoName" placeholder="算法名称..." value="MySort"
+                        <div class="dots"><span class="d1"></span></div>
+                        <input type="text" id="customAlgoName" placeholder="算法名称..." value="点击编辑"
                                aria-label="自定义算法名称">
                     </div>
                     <!-- 代码预览区 → 点击展开模态框 -->
@@ -169,7 +169,7 @@
                     </div>
                 </div>
                 <div class="methods-warning">
-                    ⚠️ <strong>注意：</strong>类名 <code>CustomSort</code> 与方法签名 <code>sort(int[], StepRecorder)</code> 为框架固定结构，<em>不可修改</em>，否则编译失败。请在方法体内编写排序逻辑。
+                    ⚠️ <strong>注意：</strong>类名 <code>CustomSort</code> 与方法签名 <code>sort(int[], StepRecorder)</code> 为框架固定结构，<em>不可修改</em>，否则可能编译失败。
                 </div>
             </div>
         </div>

@@ -339,13 +339,14 @@ public class SortEngine {
 class CompilerHelper {
 
     /**
-     * 从 Java 源码中提取 public class 的类名
+     * 从 Java 源码中  提取  类名
      * 匹配不到时回退 "CustomSort"
      */
     static String extractClassName(String source) {
+        //\s 空白符; \w 表示字母、数字、下划线; + 表示一次或多次
         java.util.regex.Pattern p = java.util.regex.Pattern.compile(
             "public\\s+class\\s+(\\w+)");
-        java.util.regex.Matcher m = p.matcher(source);
+        java.util.regex.Matcher m = p.matcher(source);//source要匹配的源字符串
         if (m.find()) return m.group(1);
         return "CustomSort";
     }
@@ -372,12 +373,13 @@ class CompilerHelper {
             // 写入源文件
             java.nio.file.Files.writeString(srcFile, source, java.nio.charset.StandardCharsets.UTF_8);
 
-            // 编译
+            // 获取文件管理器并设置输出目录
             javax.tools.StandardJavaFileManager fm =
                 compiler.getStandardFileManager(null, null, java.nio.charset.StandardCharsets.UTF_8);
             fm.setLocation(javax.tools.StandardLocation.CLASS_OUTPUT,
                 java.util.Collections.singletonList(tmpDir.toFile()));
 
+            // 编译
             Iterable<? extends javax.tools.JavaFileObject> units =
                 fm.getJavaFileObjectsFromFiles(java.util.Collections.singletonList(srcFile.toFile()));
 
@@ -414,11 +416,12 @@ class CompilerHelper {
      * 加载编译好的字节码，通过反射调用 sort() 方法
      *
      * @param bytecode  编译后的 .class 字节码
+     * @param className 类的完整名称
      * @param array     待排序数组
      * @param rec       步骤记录器
      */
     static void loadAndInvoke(byte[] bytecode, String className, int[] array, SortEngine.StepRecorder rec) throws Exception {
-        // 用自定义 ClassLoader 加载字节码
+        // 用自定义 ClassLoader 加载字节码，匿名内部类
         Class<?> clazz = new ClassLoader(CompilerHelper.class.getClassLoader()) {
             public Class<?> define(byte[] bytes, String name) {
                 return defineClass(name, bytes, 0, bytes.length);

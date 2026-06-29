@@ -170,10 +170,10 @@ public class CustomSort {
       }
 
       // 播放步骤动画
-      await Visualizer.playSteps(data.steps, currentSpeed, () => {
+      // () => currentSpeed: 每步动态读取，排序中可实时调速
+      await Visualizer.playSteps(data.steps, () => currentSpeed, () => {
         setStatus('done', '排序完成!');
-        setButtonsRunning(false);
-        document.getElementById('btnPlay').textContent = '▶ 开始';
+        setButtonsDone();
         isSorting = false;
       });
 
@@ -248,9 +248,9 @@ public class CustomSort {
       if (data.error) { toast(data.error, 'err'); setButtonsRunning(false); isSorting = false; return; }
 
       // 以单步模式播放：每步等待用户点击 ⏭
-      await Visualizer.playSteps(data.steps, 100, () => {
+      await Visualizer.playSteps(data.steps, () => currentSpeed, () => {
         setStatus('done', '单步完成');
-        setButtonsRunning(false);
+        setButtonsDone();
         isSorting = false;
       }, true); // ← true = stepByStep 模式
     } catch (err) {
@@ -323,7 +323,7 @@ public class CustomSort {
       currentAlgo = 'custom';
       updateAlgoBadge();
       closeEditor();
-      toast(`已保存: ${name}`, 'ok');
+      toast(`已保存本地: ${name}`, 'ok');
     } catch (err) {
       toast('保存失败: ' + err.message, 'err');
     }
@@ -446,6 +446,13 @@ for (int i = 1; i < n; i++) {
     document.getElementById('btnStep').disabled = running;
   }
 
+  /** 排序完成后：仅允许重置 */
+  function setButtonsDone() {
+    document.getElementById('btnPlay').disabled = true;
+    document.getElementById('btnPause').disabled = true;
+    document.getElementById('btnStep').disabled = true;
+  }
+
   function setStatus(state, text) {
     document.getElementById('statusText').textContent = text;
     const dot = document.getElementById('statusDot');
@@ -513,6 +520,18 @@ for (int i = 1; i < n; i++) {
       generateArray();
     });
 
+    // sizeInput 滚轮调节
+    document.getElementById('sizeInput').addEventListener('wheel', function(e) {
+      e.preventDefault(); // 阻止页面滚动
+      const delta = e.deltaY > 0 ? -1 : 1; // 向下滚动减1，向上滚动加1
+      let newVal = parseInt(this.value) + delta;
+      newVal = Math.max(2, Math.min(500, newVal));
+      this.value = newVal;
+      document.getElementById('sizeSlider').value = newVal;
+      // 触发 change 事件，复用已有的生成逻辑
+      this.dispatchEvent(new Event('change'));
+    }, { passive: false });
+
     // 随机生成按钮
     document.getElementById('btnGenerate').addEventListener('click', () => {
       resetSort();
@@ -577,6 +596,18 @@ for (int i = 1; i < n; i++) {
         } else if (isSorting && isPaused) {
           resumeSort();
         }
+      }
+    });
+
+    // ===== Tab 键缩进支持（代码编辑器） =====
+    document.getElementById('modalEditor').addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        const tabSize = 4;
+        this.value = this.value.substring(0, start) + ' '.repeat(tabSize) + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + tabSize;
       }
     });
 

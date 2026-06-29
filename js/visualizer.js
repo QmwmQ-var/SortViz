@@ -214,7 +214,7 @@ const Visualizer = (() => {
    * @param {Function} onDone — 播放完毕回调
    * @param {boolean} stepByStep — 是否启用单步模式
    */
-  async function playSteps(steps, speed, onDone, stepByStep) {
+  async function playSteps(steps, speedFn, onDone, stepByStep) {
     stop(); // 停止之前的动画
     isStopped = false;
     isPaused = false;
@@ -222,6 +222,9 @@ const Visualizer = (() => {
 
     for (const step of steps) {
       if (isStopped) break;
+
+      // 动态读取当前速度
+      const speed = typeof speedFn === 'function' ? speedFn() : speedFn;
 
       // 更新数组数据
       values = step.array.slice();
