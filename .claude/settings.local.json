@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -f *.class)",
+      "Bash(javac -encoding UTF-8 -d . java/SortEngine.java java/SortServer.java)",
+      "Bash(java SortServer)",
+      "Bash(curl -s http://localhost:8080/api/algorithms)",
+      "Bash(curl -s -X POST http://localhost:8080/api/sort -H \"Content-Type: application/json\" -d '{\"algorithm\":\"quick\",\"array\":[5,3,8,1,9]}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Steps: {len\\(d[\\\\\"steps\\\\\"]\\)}, Final: {d[\\\\\"steps\\\\\"][-1][\\\\\"array\\\\\"]}'\\)\")",
+      "Bash(curl -s -X POST http://localhost:8080/api/sort -H \"Content-Type: application/json\" -d '{\"algorithm\":\"merge\",\"array\":[5,3,8,1,9]}')",
+      "Bash(kill %1)",
+      "Bash(pkill -9 -f \"java SortServer\")",
+      "Bash(curl -s -o /dev/null -w \"HTML: %{http_code}\\\\n\" http://localhost:8080/)",
+      "Bash(curl -s -o /dev/null -w \"CSS:  %{http_code}\\\\n\" http://localhost:8080/css/style.css)",
+      "Bash(curl -s -o /dev/null -w \"JS1:  %{http_code}\\\\n\" http://localhost:8080/js/visualizer.js)",
+      "Bash(curl -s -o /dev/null -w \"JS2:  %{http_code}\\\\n\" http://localhost:8080/js/main.js)",
+      "Bash(curl *)"
+    ]
+  }
+}

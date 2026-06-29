@@ -1,0 +1,33 @@
+# IDEA配置
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# 编译输出
+out/
+target/
+build/
+classes/
+bin/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 本地配置
+settings.local.json
+.env
+*.local
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+*.cache
+
+# AI缓存
+.claude/

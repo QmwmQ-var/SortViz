@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sort动画 — 排序算法可视化</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+</head>
+<body>
+<!-- ============================================================
+    整体布局：
+      .app-container
+      ├── .header        (顶栏 — Logo + 算法标签)
+      ├── .main-content  (主体)
+      │   ├── .visualizer-panel (左侧 — Canvas)
+      │   └── .control-panel    (右侧 — 控制面板)
+      └── .footer        (底栏 — 状态)
+============================================================ -->
+
+<div class="app-container">
+
+    <!-- ========== 顶栏 ========== -->
+    <header class="header">
+        <h1 class="logo">◈ Sort<span>动画</span></h1>
+        <div class="header-right">
+            <span class="badge badge-algo" id="algoBadge">冒泡排序</span>
+            <!-- 侧边栏折叠按钮（小屏可见）-->
+            <button class="btn-icon" id="btnToggleSidebar" title="折叠/展开面板">☰</button>
+        </div>
+    </header>
+
+    <!-- ========== 主体 ========== -->
+    <div class="main-content">
+
+        <!-- ===== 左侧：Canvas 画布 ===== -->
+        <div class="visualizer-panel">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="sortCanvas"></canvas>
+                <!-- 占位提示 -->
+                <div class="placeholder" id="placeholder">
+                    <p>点击 <strong>▶ 开始</strong> 查看排序动画</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 右侧：控制面板 ===== -->
+        <aside class="control-panel">
+
+            <!-- 算法选择 -->
+            <div class="section">
+                <div class="section-title">📐 排序算法</div>
+                <select id="algorithmSelect" class="select-input">
+                    <optgroup label="基础排序">
+                        <option value="bubble">冒泡排序 Bubble Sort</option>
+                        <option value="selection">选择排序 Selection Sort</option>
+                        <option value="insertion">直接插入排序 Insertion Sort</option>
+                    </optgroup>
+                    <optgroup label="高效排序">
+                        <option value="quick">快速排序 Quick Sort</option>
+                        <option value="merge">归并排序 Merge Sort</option>
+                        <option value="heap">堆排序 Heap Sort</option>
+                        <option value="shell">希尔排序 Shell Sort</option>
+                    </optgroup>
+                    <optgroup label="自定义算法" id="customAlgoGroup"></optgroup>
+                </select>
+            </div>
+
+            <!-- 数组设置 -->
+            <div class="section">
+                <div class="section-title">🔢 数组设置</div>
+                <div class="control-row">
+                    <label>数组长度</label>
+                    <div class="range-row">
+                        <input type="range" id="sizeSlider" min="2" max="500" value="50" step="1">
+                        <input type="number" id="sizeInput" class="text-input"
+                               style="width:64px;padding:2px 3px;font-size:16px;text-align:center" min="2" max="500"
+                               value="50">
+                    </div>
+                </div>
+
+                <input type="text" id="customArrayInput" class="text-input"
+                       placeholder="自定义数组(空格分隔)，例: 42 71 2999 3 56">
+                <div class="btn-row" style="margin-top:8px">
+                    <button id="btnGenerate" class="btn btn-outline btn-sm">🎲 随机</button>
+                    <button id="btnCustomApply" class="btn btn-outline btn-sm">✅ 应用</button>
+                </div>
+            </div>
+
+            <!-- 速度控制 -->
+            <div class="section">
+                <div class="section-title">⏱ 动画速度</div>
+                <div class="speed-group">
+                    <button class="speed-btn" data-speed="200">慢</button>
+                    <button class="speed-btn" data-speed="120">中</button>
+                    <button class="speed-btn active" data-speed="80">快</button><!--active-->
+                    <button class="speed-btn" data-speed="40">极快</button>
+                    <button class="speed-btn" data-speed="10">⚡</button>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="section">
+                <div class="action-buttons">
+                    <button id="btnPlay" class="btn btn-primary btn-lg">▶ 开始</button>
+                    <button id="btnPause" class="btn btn-warning btn-lg" disabled>⏸ 暂停</button>
+                    <button id="btnStep" class="btn btn-outline btn-lg">⏭ 单步</button>
+                    <button id="btnReset" class="btn btn-danger btn-lg">↺ 重置</button>
+                </div>
+            </div>
+
+            <!-- ====== 自定义算法编辑器 ====== -->
+            <div class="section">
+                <div class="section-title">✏️ 自定义算法（Java）</div>
+                <div class="custom-section">
+                    <!-- 编辑器顶栏 -->
+                    <div class="custom-header">
+                        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+                        <input type="text" id="customAlgoName" placeholder="算法名称..." value="MySort"
+                               aria-label="自定义算法名称">
+                    </div>
+                    <!-- 代码预览区 → 点击展开模态框 -->
+                    <div class="code-preview" id="codePreview" title="点击展开全屏编辑器"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ========== 底栏 ========== -->
+    <footer class="footer">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">就绪 — 点击 ▶ 开始排序</span>
+    </footer>
+</div>
+
+<!-- ============================================================
+     代码编辑器模态框（点击预览区展开）
+     ============================================================ -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>✏️ 编辑 Java 排序算法</h3>
+            <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+        <!-- 编辑区 + 方法参考面板 -->
+        <div class="modal-body">
+            <!-- 左侧：代码编辑区 -->
+            <textarea class="modal-editor" id="modalEditor" spellcheck="false"></textarea>
+            <!-- 右侧：方法参考面板 -->
+            <div class="modal-methods">
+                <div class="methods-title">📖 可调用方法</div>
+                <div class="methods-list">
+                    <div class="method-item">
+                        <code>array</code>
+                        <span>int[] 待排序数组，可直接读写元素值</span>
+                    </div>
+                    <div class="method-item">
+                        <code>rec.compare(i, j)</code>
+                        <span>比较 array[i] 与 array[j]（黄色柱子）</span>
+                    </div>
+                    <div class="method-item">
+                        <code>rec.swap(i, j)</code>
+                        <span>交换 array[i] 与 array[j]（红色柱子）</span>
+                    </div>
+                    <div class="method-item">
+                        <code>rec.mark(i)</code>
+                        <span>标记 array[i] 为已排序（绿色柱子）</span>
+                    </div>
+                </div>
+                <div class="methods-warning">
+                    ⚠️ <strong>注意：</strong>类名 <code>CustomSort</code> 与方法签名 <code>sort(int[], StepRecorder)</code> 为框架固定结构，<em>不可修改</em>，否则编译失败。请在方法体内编写排序逻辑。
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <span class="modal-hint">💡 在 <code>sort</code> 方法体内编写排序逻辑</span>
+            <div style="display:flex;gap:6px">
+                <button class="btn btn-outline btn-sm" id="btnTemplate">📋 模板</button>
+                <button class="btn btn-outline btn-sm" id="btnResetCode" title="恢复为默认冒泡排序代码">🔄 重置</button>
+                <button class="btn btn-primary btn-sm" id="btnSaveAlgo">💾 保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast 通知容器 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- JS 加载顺序：visualizer 先（提供渲染能力），main 后（控制器调用 visualizer）-->
+<script src="js/visualizer.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
