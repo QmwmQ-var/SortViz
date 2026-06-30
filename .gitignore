@@ -29,6 +29,9 @@ logs/
 *.temp
 *.cache
 
+# 忽略自定义算法（由程序动态生成）
+java/CustomSort.java
+
 # AI
 .claude/
 CLAUDE.md
