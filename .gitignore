@@ -29,5 +29,6 @@ logs/
 *.temp
 *.cache
 
-# AI缓存
+# AI
 .claude/
+CLAUDE.md

@@ -76,7 +76,7 @@ public class SortServer {
 
         server.start();
         System.out.println("╔══════════════════════════════════════╗");
-        System.out.println("║   Sort动画 Server                     ║");
+        System.out.println("║   SortViz Server                     ║");
         System.out.println("║   http://localhost:" + PORT + "              ║");
         System.out.println("║   已注册 " + SortEngine.ALGORITHM_NAMES.length + " 个排序算法                   ║");
         System.out.println("╚══════════════════════════════════════╝");

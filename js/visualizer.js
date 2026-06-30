@@ -231,24 +231,28 @@ const Visualizer = (() => {
 
       // 根据步骤类型设置柱子高亮
       if (step.type === 'compare') {
-        // 先高亮 → 等待 → 恢复
-        states = new Array(values.length).fill(STATE.DEFAULT);
+        // 重置非已排序的柱子，保留绿色 SORTED 柱子
+        for (let k = 0; k < states.length; k++) {
+          if (states[k] !== STATE.SORTED) states[k] = STATE.DEFAULT;
+        }
         states[step.i] = STATE.COMPARING;
         states[step.j] = STATE.COMPARING;
         needsDraw = true;
         await delay(speed);
-        states[step.i] = STATE.DEFAULT;
-        states[step.j] = STATE.DEFAULT;
+        if (states[step.i] === STATE.COMPARING) states[step.i] = STATE.DEFAULT;
+        if (states[step.j] === STATE.COMPARING) states[step.j] = STATE.DEFAULT;
         needsDraw = true;
       } else if (step.type === 'swap') {
-        // 高亮交换 → 等待 → 恢复
-        states = new Array(values.length).fill(STATE.DEFAULT);
+        // 重置非已排序的柱子，保留绿色 SORTED 柱子
+        for (let k = 0; k < states.length; k++) {
+          if (states[k] !== STATE.SORTED) states[k] = STATE.DEFAULT;
+        }
         states[step.i] = STATE.SWAPPING;
         states[step.j] = STATE.SWAPPING;
         needsDraw = true;
         await delay(speed);
-        states[step.i] = STATE.DEFAULT;
-        states[step.j] = STATE.DEFAULT;
+        if (states[step.i] === STATE.SWAPPING) states[step.i] = STATE.DEFAULT;
+        if (states[step.j] === STATE.SWAPPING) states[step.j] = STATE.DEFAULT;
         needsDraw = true;
       } else if (step.type === 'mark') {
         // 标记为已排序（持续绿色）
