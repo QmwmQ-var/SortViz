@@ -6,23 +6,52 @@ import java.util.*;
  * ============================================================
  * <p>
  * 【职责】
- *   1. 实现所有排序算法（冒泡、选择、插入、快速、归并...）
+ *   1. 实现所有排序算法（冒泡、选择、插入、快速、归并、堆、希尔）
  *   2. 记录排序过程中的每一步操作（比较、交换、标记）
  *   3. 编译并执行用户提交的自定义 Java 排序算法
  * <p>
  * 【模块协作】
- *   SortEngine ← 被 SortServer 调用
- *     ↓ 产生
- *   List<SortStep> → 转成 JSON → 前端 Canvas 逐帧动画
+ *   SortServer 调用 SortEngine.execute() 或 executeCustom()
+ *     ↓ 执行排序，返回
+ *   List<SortStep> → 由 SortServer 转成 JSON → 前端 Canvas 逐帧动画
  * <p>
- * 【对于自定义算法】
- *   用户在浏览器中编写 Java 代码 → 前端将代码 POST 到服务器
- *   → SortEngine 使用 javax.tools.JavaCompiler 动态编译
- *   → 反射加载并执行 → 返回步骤列表给前端
+ * 【自定义算法处理机制】
  * <p>
- *   用户代码需要访问两个对象：
- *     array  (int[])   — 待排序的数组
- *     rec    (StepRecorder) — 记录操作，提供 compare/swap/mark 方法
+ *   自定义算法采用"持久化存储 + 运行时编译"两套机制分离的设计：
+ * <p>
+ *   保存阶段（用户点击"保存"）：
+ *     前端 POST /api/custom/save → SortServer.handleSaveCustom()
+ *       → 将用户代码写入 java/CustomSort.java（持久化存储）
+ *       → 首行添加 // @sortviz-name <显示名> 元数据注释
+ * <p>
+ *   运行阶段（用户点击"开始"）：
+ *     前端 POST /api/custom → SortServer.handleCustom()
+ *       → 读取编辑器中的代码（或从 CustomSort.java 加载）
+ *       → SortEngine.executeCustom() 处理
+ *       → CompilerHelper.compile() 在 /tmp/ 创建临时文件编译
+ *       → CompilerHelper.loadAndInvoke() 自定义 ClassLoader 加载并反射执行
+ *       → 编译产生的临时文件在编译完成后立即删除
+ * <p>
+ *   用户代码中可访问两个对象：
+ *     array  (int[])           — 待排序的数组，可直接读写
+ *     rec    (StepRecorder)    — 步骤记录器，提供 compare/swap/mark 方法
+ * <p>
+ * 【执行流程】
+ *   内置算法:
+ *     execute(name, array) → 根据 name 选择算法 → 执行 → 返回 List<SortStep>
+ * <p>
+ *   自定义算法:
+ *     executeCustom(userCode, array) → wrapUserCode() 包装
+ *       → CompilerHelper.extractClassName() 提取类名
+ *       → CompilerHelper.compile() 动态编译
+ *       → CompilerHelper.loadAndInvoke() 反射执行
+ *       → 返回 List<SortStep>
+ * <p>
+ * 【设计说明】
+ *   - StepRecorder 在算法执行过程中收集每一步操作，生成 SortStep 列表
+ *   - SortStep 包含操作类型、索引和数组快照，供前端逐帧播放
+ *   - 临时编译在 /tmp/ 目录进行，执行后自动清理，不污染项目目录
+ *   - CustomSort.java 持久化保存，服务器重启后用户代码不丢失
  * ============================================================
  */
 public class SortEngine {
@@ -196,7 +225,7 @@ public class SortEngine {
 
     static int partition(int[] a, StepRecorder rec, int lo, int hi) {
         int pivot = a[hi];                        // 选最后一个元素为基准
-        int i = lo;
+        int i = lo;                               // i 指向"小于基准区"的下一个位置
         for (int j = lo; j < hi; j++) {
             rec.compare(j, hi);                   // 和基准比较
             if (a[j] <= pivot) {
@@ -211,18 +240,18 @@ public class SortEngine {
     // ---- 归并排序 ----
     // 思想：把数组分成两半，分别排序，再合并两个有序子数组
     static void mergeSort(int[] a, StepRecorder rec) {
-        _mergeSort(a, rec, 0, a.length - 1);
+        mSort(a, rec, 0, a.length - 1);
     }
-    private static void _mergeSort(int[] a, StepRecorder rec, int lo, int hi) {
+    private static void mSort(int[] a, StepRecorder rec, int lo, int hi) {
         if (lo >= hi) { if (lo == hi) rec.mark(lo); return; }
-        int mid = (lo + hi) / 2;
-        _mergeSort(a, rec, lo, mid);              // 排左边
-        _mergeSort(a, rec, mid + 1, hi);          // 排右边
+        int mid = lo + (hi - lo) / 2;
+        mSort(a, rec, lo, mid);              // 排左边
+        mSort(a, rec, mid + 1, hi);          // 排右边
         merge(a, rec, lo, mid, hi);               // 合并
     }
 
     static void merge(int[] a, StepRecorder rec, int lo, int mid, int hi) {
-        int[] left  = Arrays.copyOfRange(a, lo, mid + 1);
+        int[] left  = Arrays.copyOfRange(a, lo, mid + 1); //复制 [from, to) 区间!
         int[] right = Arrays.copyOfRange(a, mid + 1, hi + 1);
         int i = 0, j = 0, k = lo;
         while (i < left.length && j < right.length) {
@@ -235,7 +264,7 @@ public class SortEngine {
     }
 
     // ---- 堆排序 ----
-    // 思想：利用最大堆数据结构，反复取出堆顶（最大值）放到末尾
+    // 思想：利用最大堆数据结构，反复取出堆顶（最大值）放到末尾(下标从0开始)
     static void heapSort(int[] a, StepRecorder rec) {
         int n = a.length;
         for (int i = n / 2 - 1; i >= 0; i--) heapify(a, rec, n, i); // 建堆
@@ -366,11 +395,13 @@ class CompilerHelper {
                 return null;
             }
 
-            // 创建临时目录
+            // 创建临时文件，运行时临时创建，用完即删
+            // 例如C:\Users\你的用户名\AppData\Local\Temp\sortviz_123456
             java.nio.file.Path tmpDir = java.nio.file.Files.createTempDirectory("sortviz_");
+            // 拼成C:\Users\你的用户名\AppData\Local\Temp\sortviz_123456\CustomSort.java
             java.nio.file.Path srcFile = tmpDir.resolve(className + ".java");
 
-            // 写入源文件
+            // 写入临时文件
             java.nio.file.Files.writeString(srcFile, source, java.nio.charset.StandardCharsets.UTF_8);
 
             // 获取文件管理器并设置输出目录
@@ -401,7 +432,7 @@ class CompilerHelper {
                 return bytes;
             }
 
-            // 清理
+            // 清理临时文件
             java.nio.file.Files.walk(tmpDir)
                 .sorted(java.util.Comparator.reverseOrder())
                 .forEach(p -> { try { java.nio.file.Files.delete(p); } catch (Exception ignored) {} });

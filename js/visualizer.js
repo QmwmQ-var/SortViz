@@ -48,7 +48,7 @@ const Visualizer = (() => {
   let canvas, ctx, wrapper;
   let values = [];          // 当前数组值
   let states = [];          // 每根柱子的状态
-  let animFrameId = null;   // requestAnimationFrame ID
+  let animFrameId = null;   // requestAnimationFrame ID，存储动画帧ID
   let needsDraw = true;     // 脏标记
 
   /**
@@ -60,14 +60,15 @@ const Visualizer = (() => {
     ctx = canvas.getContext('2d');
     wrapper = document.getElementById('canvasWrapper');
 
-    // 监听容器大小变化 → 自动调整 Canvas 分辨率
+    // 监听wrapper容器大小变化 → 自动调整 Canvas 分辨率，resizeCanvas()是自定义
     new ResizeObserver(() => resizeCanvas()).observe(wrapper);
+    // 手动调用一次，初始化画布
     resizeCanvas();
 
     // 启动渲染循环（60fps，只在 needsDraw=true 时绘制）
     function loop() {
       if (needsDraw) { draw(); needsDraw = false; }
-      animFrameId = requestAnimationFrame(loop);
+      animFrameId = requestAnimationFrame(loop); //屏幕刷新时，执行 loop 函数
     }
     loop();
   }
@@ -76,11 +77,13 @@ const Visualizer = (() => {
   function resizeCanvas() {
     if (!canvas || !wrapper) return;
     const rect = wrapper.getBoundingClientRect();
+    //1个CSSpx = dpr个屏幕物理像素点
     const dpr = window.devicePixelRatio || 1;
-    canvas.width  = rect.width  * dpr;
+    canvas.width  = rect.width  * dpr; //画布像素尺寸，解决高清屏模糊
     canvas.height = rect.height * dpr;
-    canvas.style.width  = rect.width  + 'px';
+    canvas.style.width  = rect.width  + 'px'; //CSS 显示尺寸，决定视觉大小
     canvas.style.height = rect.height + 'px';
+    //把绘图坐标系放大dpr倍，之后绘图直接用css像素，不用处处乘dpr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     needsDraw = true;
   }
@@ -153,19 +156,18 @@ const Visualizer = (() => {
       grad.addColorStop(1, darken(color, 0.35));
       ctx.fillStyle = grad;
 
-      // 圆角矩形
+      // 圆角矩形，x轴水平向右，y轴竖直向下，逆时针绘制
       const r = Math.min(barW / 2, 3);
       ctx.beginPath();
-      ctx.moveTo(x + r, y);
+      ctx.moveTo(x + r, y); //路径起点，顶部左圆角结束点
       ctx.lineTo(x + barW - r, y);
-      ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+      ctx.quadraticCurveTo(x + barW, y, x + barW, y + r); //(cpx,cpy)为控制点，此即原直角点
       ctx.lineTo(x + barW, y + valH);
       ctx.lineTo(x, y + valH);
       ctx.lineTo(x, y + r);
       ctx.quadraticCurveTo(x, y, x + r, y);
       ctx.closePath();
       ctx.fill();
-
 
       // 数组 ≤ 50 时在柱子底部显示数值
       if (n <= 50) {
@@ -195,11 +197,11 @@ const Visualizer = (() => {
   // ============================================================
 
   let playbackTimer = null;   // setTimeout ID
-  let isPaused = false;       // 是否暂停
+  let isPaused = false;       // 是否暂停,暂时停止
   let resumeCallback = null;  // 暂停时 resolve 的函数
-  let isStopped = false;      // 是否被停止
+  let isStopped = false;      // 是否被终止,永久停止
   let stepMode = false;       // 单步模式
-  let stepResolve = null;     // 单步模式下等待用户点击的 resolve
+  let stepResolve = null;     // 单步模式下等待用户点击的 resolve，存储 Promise 的 resolve 函数的变量
 
   /**
    * 逐步播放排序步骤（动画循环的核心）
@@ -210,20 +212,20 @@ const Visualizer = (() => {
    *   3. 全部播完后恢复柱子颜色并回调 onDone
    *
    * @param {Array}  steps  — 步骤数组 [{type, i, j, array}, ...]
-   * @param {number} speed  — 每步之间的延迟（毫秒），步进模式下忽略
+   * @param {number} speedFn  — 每步之间的延迟（毫秒），步进模式下忽略
    * @param {Function} onDone — 播放完毕回调
    * @param {boolean} stepByStep — 是否启用单步模式
    */
   async function playSteps(steps, speedFn, onDone, stepByStep) {
-    stop(); // 停止之前的动画
+    stop(); // 终止之前的动画
     isStopped = false;
     isPaused = false;
-    stepMode = !!stepByStep;
+    stepMode = !!stepByStep; //把任何值强制转换为布尔值
 
     for (const step of steps) {
       if (isStopped) break;
 
-      // 动态读取当前速度
+      // 动态读取当前速度, 等式一定为真，但为了健壮性：万一以后有其他调用方式传入了数字，它也能正常工作
       const speed = typeof speedFn === 'function' ? speedFn() : speedFn;
 
       // 更新数组数据
@@ -258,7 +260,7 @@ const Visualizer = (() => {
         // 标记为已排序（持续绿色）
         states[step.i] = STATE.SORTED;
         needsDraw = true;
-        await delay(Math.max(10, speed / 4)); // 标记操作更快
+        await delay(Math.max(1, speed / 4));
       }
     }
 
@@ -280,9 +282,9 @@ const Visualizer = (() => {
   /** 继续动画 */
   function resume() {
     isPaused = false;
-    if (resumeCallback) {
-      resumeCallback();
-      resumeCallback = null;
+    if (resumeCallback) { //检查变量里有无函数
+      resumeCallback(); //调用函数
+      resumeCallback = null; //再次清空(双重保险)
     }
   }
 
@@ -297,11 +299,11 @@ const Visualizer = (() => {
   /** 是否处于单步模式 */
   function isStepMode() { return stepMode; }
 
-  /** 停止动画 */
-  function stop() {
+  /** 终止动画 */
+  function stop() { //把所有 状态、定时器、异步 全部清理干净，解决阻塞点
     isStopped = true;
     stepMode = false;
-    if (isPaused) resume(); // 先解除暂停再停止
+    if (isPaused) resume(); // 先解除暂停再终止
     if (stepResolve) { stepResolve(); stepResolve = null; }
     if (playbackTimer) {
       clearTimeout(playbackTimer);
@@ -310,33 +312,36 @@ const Visualizer = (() => {
   }
 
   function isRunning() { return !isStopped && (playbackTimer !== null || stepMode); }
-  function paused()    { return isPaused; }
+  function is_paused() { return isPaused; }
 
   /**
-   * 可暂停 / 可单步的延时函数
+   * 延时函数
    *
    * - 普通模式：等待 speed ms
    * - 暂停模式：等待 resume()
    * - 单步模式：等待 advanceStep() 被调用
-   * - 停止时立即 resolve
+   * - 终止时立即 resolve
    */
   function delay(ms) {
     return new Promise((resolve) => {
       const go = () => {
         if (isStopped) { resolve(); return; }
-        if (stepMode) {
-          // 单步模式：等待用户点击"单步"按钮
+        if (stepMode) { //单步模式：等待用户点击"单步"按钮，Promise卡住
           stepResolve = () => {
             stepResolve = null;
+            //时间到 → resolve 执行 → Promise 结束 → await 继续跑后面代码
+            //返回值是一个正整数，表示由 setTimeout() 调用创建的定时器的标识符
             playbackTimer = setTimeout(resolve, ms);
           };
-        } else if (isPaused) {
-          // 暂停：存储 resolve 回调，等 resume() 时调用
+        } else if (isPaused) { //暂停模式，Promise卡住
+          //将箭头函数赋值全局变量，resume()执行时回调
           resumeCallback = () => {
+            //避免用户连续点 “恢复” 按钮，多次调用 resumeCallback()
             resumeCallback = null;
+            //如果直接 setTimeout (resolve, ms)，就做不到 “恢复之后还能再次暂停”
             playbackTimer = setTimeout(go, ms);
           };
-        } else {
+        } else { //普通模式
           playbackTimer = setTimeout(resolve, ms);
         }
       };
@@ -346,5 +351,5 @@ const Visualizer = (() => {
 
   // 公开 API
   return { init, setValues, setState, clearStates, redraw, resizeCanvas,
-           playSteps, pause, resume, advanceStep, isStepMode, stop, isRunning, paused };
+           playSteps, pause, resume, advanceStep, isStepMode, stop, isRunning, is_paused };
 })();

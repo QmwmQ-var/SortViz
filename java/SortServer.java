@@ -1,9 +1,12 @@
 import com.sun.net.httpserver.*;
+
+import java.awt.*;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.Executors;
 
 /**
@@ -17,22 +20,44 @@ import java.util.concurrent.Executors;
  * <p>
  * 【模块协作】
  * 浏览器 ←HTTP→ SortServer ←调用→ SortEngine
- * ↑ 静态文件
- * ↑ index.html / css / js
+ *                 ↑ 静态文件
+ *                 ↑ index.html / css / js
  * <p>
  * 【API 一览】
- * GET  /api/algorithms              — 返回算法名称列表
- * POST /api/sort                    — 执行内置排序算法
- * 请求体: {"algorithm":"bubble", "array":[5,3,8,1,9]}
- * 响应:   {"steps":[...]}
- * POST /api/custom                  — 编译并执行用户的自定义算法
- * 请求体: {"code":"...", "array":[5,3,8,1,9]}
- * 响应:   {"steps":[...], "error":"..."}
+ * GET /api/algorithms
+ *   返回所有可用的排序算法名称列表
+ *   响应示例: {"algorithms":["bubble","quick",...]}
+ * <p>
+ * POST /api/sort
+ *   执行内置排序算法
+ *   请求体: {"algorithm":"bubble", "array":[5,3,8,1,9]}
+ *   响应:   {"steps":[{"type":"compare","i":0,"j":1,"array":[...]}, ...]}
+ * <p>
+ * POST /api/custom
+ *   编译并执行用户提交的自定义排序算法
+ *   请求体: {"code":"public class CustomSort { ... }", "array":[5,3,8,1,9]}
+ *   响应:   {"steps":[...]} 或 {"error":"编译失败，请检查代码"}
+ * <p>
+ * GET /api/custom/list
+ *   获取已保存的自定义算法
+ *   响应: {"algorithms":[{"id":"custom","name":"MySort","code":"..."}]}
+ * <p>
+ * POST /api/custom/save
+ *   保存自定义算法到 java/CustomSort.java
+ *   请求体: {"name":"MySort", "code":"..."}
+ *   响应: {"ok":true}
+ * <p>
+ * DELETE /api/custom/delete
+ *   删除已保存的自定义算法文件
+ *   响应: {"ok":true} 或 {"error":"File not found"}
  * <p>
  * 【启动方式】
- * javac -encoding UTF-8 java/*.java
- * java SortServer
- * 然后打开 http://localhost:8080
+ * 编译: javac -encoding UTF-8 java/*.java
+ * 运行: java SortServer
+ * 访问: http://localhost:8080
+ * <p>
+ * 【停止方式】
+ * 按 Ctrl+C 或执行: pkill -f SortServer
  * ============================================================
  */
 public class SortServer {
@@ -45,7 +70,7 @@ public class SortServer {
     // MIME 类型映射(/maɪm/)，告诉浏览器是什么格式的文件
     private static final Map<String, String> MIME = new HashMap<>();
 
-    static {//节省内存
+    static {//静态节省内存
         MIME.put("html", "text/html; charset=utf-8");
         MIME.put("css", "text/css; charset=utf-8");
         MIME.put("js", "application/javascript; charset=utf-8");
@@ -75,11 +100,13 @@ public class SortServer {
         server.createContext("/", new FileHandler());
 
         server.start();
-        System.out.println("╔══════════════════════════════════════╗");
-        System.out.println("║   SortViz Server                     ║");
-        System.out.println("║   http://localhost:" + PORT + "              ║");
-        System.out.println("║   已注册 " + SortEngine.ALGORITHM_NAMES.length + " 个排序算法                   ║");
-        System.out.println("╚══════════════════════════════════════╝");
+        System.out.println("----------------------------------------");
+        System.out.println("|   SortViz Server                     |");
+        System.out.println("|   http://localhost:" + PORT + "              |");
+        System.out.println("----------------------------------------");
+
+        // 自动打开浏览器
+        openBrowser("http://localhost:" + PORT);
 
         // 正常退出时释放端口
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -88,8 +115,19 @@ public class SortServer {
         }));
     }
 
+    private static void openBrowser(String url) {
+        try {
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().browse(new URI(url));
+                System.out.println("✅ 已自动打开浏览器");
+            }
+        } catch (Exception e) {
+            System.out.println("⚠️ 无法自动打开浏览器，请手动访问: " + url);
+        }
+    }
+
     // ========================================================
-    // API 处理器
+    // API 处理器（所有以 /api/ 开头的请求）
     // ========================================================
     static class ApiHandler implements HttpHandler {
         @Override
@@ -105,8 +143,8 @@ public class SortServer {
 
             //当 JavaScript 发送跨域请求时，浏览器会先发一个 OPTIONS 请求，
             //询问服务器"你支持哪些方法？允许哪些头？"，服务器回复后，浏览器才发送真正的请求
-            if ("OPTIONS".equalsIgnoreCase(method)) { //比较&不区分大小写
-                ex.sendResponseHeaders(204, -1);
+            if ("OPTIONS".equalsIgnoreCase(method)) { //比较(不区分大小写)
+                ex.sendResponseHeaders(204, -1);//204 No Content
                 return;
             }
 
@@ -420,7 +458,7 @@ public class SortServer {
     }
 
     // ========================================================
-    // 静态文件处理器
+    // 静态文件处理器（所有不以 /api/ 开头的请求）
     // ========================================================
 
     static class FileHandler implements HttpHandler {
@@ -430,7 +468,7 @@ public class SortServer {
 
         @Override
         public void handle(HttpExchange ex) throws IOException {
-            // 将根路径 / 映射到 /index.html
+            // !!! 将根路径 / 映射到 /index.html
             String path = ex.getRequestURI().getPath();
             if ("/".equals(path)) path = "/index.html";
 
@@ -464,7 +502,7 @@ public class SortServer {
             byte[] data = Files.readAllBytes(file);
 
             ex.getResponseHeaders().set("Content-Type", mime);
-            //开发时修改了 CSS/JS,刷新浏览器立即生效,不需要手动清空浏览器缓存
+            //使开发时修改CSS/JS,刷新浏览器立即生效,不需要手动清空浏览器缓存
             ex.getResponseHeaders().set("Cache-Control", "no-cache");
             ex.sendResponseHeaders(200, data.length);
             try (OutputStream os = ex.getResponseBody()) {

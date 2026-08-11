@@ -23,7 +23,7 @@
 
     <!-- ========== 顶栏 ========== -->
     <header class="header">
-        <h1 class="logo">🌙 Sort<span>动画</span></h1>
+        <h1 class="logo">🌙<span class="logo1">Sort</span><span class="logo2">动画</span></h1>
         <div class="header-right">
             <span class="badge badge-algo" id="algoBadge">冒泡排序</span>
             <!-- 侧边栏折叠按钮（小屏可见）-->
@@ -36,9 +36,11 @@
 
         <!-- ===== 左侧：Canvas 画布 ===== -->
         <div class="visualizer-panel">
+            <!-- wrapper: 定位参考盒 -->
             <div class="canvas-wrapper" id="canvasWrapper">
+                <!--canvas 本身很难做自适应布局，交给 div 容器处理布局，canvas 只负责绘图-->
                 <canvas id="sortCanvas"></canvas>
-                <!-- 占位提示 -->
+                <!-- 占位提示，半透明背景 + 模糊 -->
                 <div class="placeholder" id="placeholder">
                     <p>点击 <strong>▶ 开始</strong> 查看排序动画</p>
                 </div>
@@ -95,8 +97,8 @@
                     <button class="speed-btn" data-speed="200">慢</button>
                     <button class="speed-btn" data-speed="120">中</button>
                     <button class="speed-btn active" data-speed="80">快</button><!--active-->
-                    <button class="speed-btn" data-speed="40">极快</button>
-                    <button class="speed-btn" data-speed="10">⚡</button>
+                    <button class="speed-btn" data-speed="20">极快</button>
+                    <button class="speed-btn" data-speed="1">⚡</button>
                 </div>
             </div>
 
@@ -116,9 +118,9 @@
                 <div class="custom-section">
                     <!-- 编辑器顶栏 -->
                     <div class="custom-header">
-                        <div class="dots"><span class="d1"></span></div>
-                        <input type="text" id="customAlgoName" placeholder="算法名称..." value="点击编辑"
-                               aria-label="自定义算法名称">
+                        <div class="dots">算法名称：</div>
+                        <!-- 输入框非空时显示的是value，而占位符placeholder会被覆盖掉。-->
+                        <input type="text" id="customAlgoName" placeholder="点击输入算法名称" >
                     </div>
                     <!-- 代码预览区 → 点击展开模态框 -->
                     <div class="code-preview" id="codePreview" title="点击展开全屏编辑器"></div>
@@ -177,7 +179,7 @@
             <span class="modal-hint">💡 在 <code>sort</code> 方法体内编写排序逻辑</span>
             <div style="display:flex;gap:6px">
                 <button class="btn btn-outline btn-sm" id="btnTemplate">📋 模板</button>
-                <button class="btn btn-outline btn-sm" id="btnResetCode" title="恢复为默认冒泡排序代码">🔄 重置</button>
+                <button class="btn btn-outline btn-sm" id="btnResetCode">🔄 重置</button>
                 <button class="btn btn-primary btn-sm" id="btnSaveAlgo">💾 保存</button>
             </div>
         </div>
